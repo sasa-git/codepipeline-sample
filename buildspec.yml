@@ -1,0 +1,21 @@
+# buildspec.ymlには3つのフェーズを定義
+# 1. pre_build - ECRにログイン
+# 2. build - Dockerイメージのビルドとプッシュ
+# 3. post_build - imagedefinitions.jsonファイルの作成（CodePipelineで触れる）
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+    - $(aws ecr get-login --region $AWS_DEFAULT_RESION --no-include-email)
+    - REPO=$(aws ecr describe-repositories --repository-banes example --output text --query "repositories[0].repositoryUri")
+    - IMAGE=$REPO:latest
+  build:
+    commands:
+    - docker build -t $IMAGE
+    - docker push $IMAGE
+  post_build:
+    commands:
+    - printf '[{"name":"example", "imageUri":"%s"}]' $IMAGE > imagedefinitions.json
+artifacts:
+  files: imagedefinitions.json
